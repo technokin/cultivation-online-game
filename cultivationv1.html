@@ -158,6 +158,8 @@ const ACHIEVEMENTS_DATA = [
   { id: "immortal",        title: "True Immortal",                  desc: "Ascend to the Immortal Realm.",   icon: "☀️",  check: (g) => g.stageId >= 25 },
   { id: "celestial_body",  title: "Heaven Refining Physique",       desc: "Achieve the Celestial Body.",     icon: "🌌",  check: (g) => g.bodyStageId >= 14 },
   { id: "perfect_scripture",title:"Heavenly Scripture Master",      desc: "Equip a Celestial-ranked scripture.",icon:"📖",check: (g) => g.equippedScripture === "heaven_refining" },
+  { id: "fortune_seeker",   title: "Fortune Seeker",                desc: "Trigger 10 Heavenly Fate encounters.", icon: "🎲", check: (g) => g.fortuneCount >= 10 },
+  { id: "fated_one",        title: "Favored by Heaven",             desc: "Trigger 50 Heavenly Fate encounters.", icon: "🌠", check: (g) => g.fortuneCount >= 50 },
 ];
 
 // ─── Format big numbers
@@ -194,6 +196,8 @@ const INIT = {
   achievements: [],
   log: ["⚡ Welcome to Cultivation Online! Your journey to immortality begins now."],
   totalKills: 0,
+  fortuneCount: 0,
+  lastFortuneAt: 0,
   isNew: true,
 };
 
@@ -522,6 +526,68 @@ export default function CultivationOnline() {
     showNotif("Fully rested!", "#4de8b0");
   };
 
+  // ── Heavenly Fate encounter (novel-inspired random event)
+  const invokeHeavenlyFate = () => {
+    const p = gRef.current;
+    const now = Date.now();
+    const cd = 30000;
+    if (now - p.lastFortuneAt < cd) {
+      const left = Math.ceil((cd - (now - p.lastFortuneAt)) / 1000);
+      showNotif(`Heavenly fate is unstable. Wait ${left}s.`, "#ff4f7b");
+      return;
+    }
+
+    const roll = Math.random();
+    const stageBoost = 1 + p.stageId * 0.22;
+    const goodLuck = Math.min(0.45, p.lck / 220);
+
+    setG(prev => {
+      const next = { ...prev, lastFortuneAt: now, fortuneCount: prev.fortuneCount + 1 };
+
+      if (roll < 0.45 + goodLuck) {
+        const qiGain = Math.floor((250 + prev.spd * 9) * stageBoost);
+        const stonesGain = Math.floor((8 + prev.stageId * 2) * stageBoost);
+        const fameGain = Math.floor(5 + prev.stageId * 0.8);
+        const np = {
+          ...next,
+          qi: prev.qi + qiGain,
+          spiritStones: prev.spiritStones + stonesGain,
+          fame: prev.fame + fameGain,
+          log: [`🌠 Heavenly luck! You found a hidden vein (+${fmt(qiGain)} Qi, +${fmt(stonesGain)} Stones).`, ...prev.log],
+        };
+        showNotif("🌠 Heavenly blessing descended!", "#5cb8ff", 3000);
+        checkAchievements(np);
+        return np;
+      }
+
+      if (roll < 0.8 + goodLuck / 2) {
+        const bodyGain = Math.floor((45 + prev.atk * 0.35) * stageBoost);
+        const hpGain = Math.floor(prev.maxHp * 0.2);
+        const np = {
+          ...next,
+          bodyXp: prev.bodyXp + bodyGain,
+          hp: Math.min(prev.maxHp, prev.hp + hpGain),
+          log: [`🕯️ You comprehended a Dao fragment (+${fmt(bodyGain)} Body XP).`, ...prev.log],
+        };
+        showNotif("🕯️ Minor enlightenment achieved.", "#c878ff", 2600);
+        checkAchievements(np);
+        return np;
+      }
+
+      const hpLoss = Math.max(1, Math.floor(prev.maxHp * (0.12 + Math.random() * 0.1)));
+      const goldLoss = Math.floor(prev.gold * 0.08);
+      const np = {
+        ...next,
+        hp: Math.max(1, prev.hp - hpLoss),
+        gold: Math.max(0, prev.gold - goldLoss),
+        log: [`⚡ A karmic backlash struck! (-${fmt(hpLoss)} HP, -${fmt(goldLoss)} Gold).`, ...prev.log],
+      };
+      showNotif("⚡ Karmic backlash!", "#ff4f7b", 3000);
+      checkAchievements(np);
+      return np;
+    });
+  };
+
   // ── CHEAT ENGINE
   useEffect(() => {
     window.CHEAT = {
@@ -651,6 +717,8 @@ export default function CultivationOnline() {
   const canAscend = nextStage && g.qi >= stage.qiReq && g.bodyStageId >= stage.bodyReq;
   const canBodyAscend = nextBody && g.bodyXp >= nextBody.req;
   const currentArea = AREAS.find(a => a.id === g.currentArea) || AREAS[0];
+  const fateCooldown = Math.max(0, 30000 - (Date.now() - g.lastFortuneAt));
+  const fateReady = fateCooldown === 0;
 
   const RANK_COLORS = { Mortal: "#a0a0a0", Earth: "#8b7355", Heaven: "#5cb8ff", Divine: "#a855f7", Ancient: "#f97316", Mythic: "#ec4899", Supreme: "#06b6d4", Celestial: "#fffbe6" };
 
@@ -871,6 +939,9 @@ export default function CultivationOnline() {
                     {training && <span style={{ color:"#e06050", animation:"pulse 1s infinite", fontSize:11 }}>● +{(1+g.stageId*0.2+g.atk*0.05).toFixed(1)}×{scripture.bodMult}/tick</span>}
                   </button>
                   <button className="btn btn-red" onClick={explore}>⚔️ Explore: {currentArea.name}</button>
+                  <button className={`btn${fateReady ? " btn-blue" : ""}`} onClick={invokeHeavenlyFate}>
+                    🎲 Invoke Heavenly Fate {fateReady ? "" : `(${Math.ceil(fateCooldown / 1000)}s)`}
+                  </button>
                   <button className="btn btn-green" onClick={rest}>🏮 Meditate & Rest (Full HP)</button>
                 </div>
               </div>
@@ -894,7 +965,7 @@ export default function CultivationOnline() {
               <div className="card" style={{ marginBottom:12 }}>
                 <div style={{ fontSize:10, letterSpacing:3, color:"#5a4a6a", textTransform:"uppercase", marginBottom:8 }}>Attributes</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, fontSize:12 }}>
-                  {[["⚔️ ATK",fmt(g.atk)],["🛡️ DEF",fmt(g.def)],["💨 SPD",fmt(g.spd)],["🍀 LCK",fmt(g.lck)],["🪙 Gold",fmt(g.gold)],["💎 Stones",fmt(g.spiritStones)]].map(([k,v])=>(
+                  {[["⚔️ ATK",fmt(g.atk)],["🛡️ DEF",fmt(g.def)],["💨 SPD",fmt(g.spd)],["🍀 LCK",fmt(g.lck)],["🪙 Gold",fmt(g.gold)],["💎 Stones",fmt(g.spiritStones)],["🎲 Fate",fmt(g.fortuneCount)]].map(([k,v])=>(
                     <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"4px 8px", background:"#12101820", borderRadius:3 }}>
                       <span style={{color:"#6a5a7a"}}>{k}</span>
                       <span style={{color:"#c8b8e8", fontFamily:"monospace"}}>{v}</span>
