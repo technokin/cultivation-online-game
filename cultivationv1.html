@@ -1,0 +1,1202 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║           CULTIVATION ONLINE - GAME DATA                ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// ── Spirit Realm: 9 stages × 9 levels each, then higher realms
+const CULTIVATION_STAGES = [
+  // ── SPIRIT REALM ──
+  { id: 0,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "1st",  color: "#7fb3d3", qiReq: 100,      bodyReq: 0,  desc: "The first step on the immortal path." },
+  { id: 1,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "2nd",  color: "#7fb3d3", qiReq: 250,      bodyReq: 0,  desc: "Qi flows more smoothly." },
+  { id: 2,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "3rd",  color: "#7fb3d3", qiReq: 500,      bodyReq: 0,  desc: "The dantian begins to stabilize." },
+  { id: 3,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "4th",  color: "#7fb3d3", qiReq: 900,      bodyReq: 0,  desc: "Spiritual sense begins to awaken." },
+  { id: 4,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "5th",  color: "#7fb3d3", qiReq: 1500,     bodyReq: 1,  desc: "Halfway through the Apprentice stage." },
+  { id: 5,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "6th",  color: "#7fb3d3", qiReq: 2500,     bodyReq: 1,  desc: "Qi circulation speeds up." },
+  { id: 6,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "7th",  color: "#7fb3d3", qiReq: 4000,     bodyReq: 2,  desc: "The path ahead grows clearer." },
+  { id: 7,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "8th",  color: "#7fb3d3", qiReq: 6000,     bodyReq: 2,  desc: "Power rises with each breath." },
+  { id: 8,  realm: "Spirit Realm",   rank: "Spirit Apprentice",   level: "9th",  color: "#7fb3d3", qiReq: 9000,     bodyReq: 3,  desc: "Peak Apprentice — the threshold beckons." },
+  { id: 9,  realm: "Spirit Realm",   rank: "Spirit Warrior",      level: "",     color: "#5dade2", qiReq: 18000,    bodyReq: 3,  desc: "A true warrior of spirit. Combat power surges." },
+  { id: 10, realm: "Spirit Realm",   rank: "Spirit Master",       level: "",     color: "#3498db", qiReq: 50000,    bodyReq: 4,  desc: "Your mastery over Qi becomes undeniable." },
+  { id: 11, realm: "Spirit Realm",   rank: "Spirit Grandmaster",  level: "",     color: "#2e86c1", qiReq: 150000,   bodyReq: 5,  desc: "Lifespan extends to 1,000 years." },
+  { id: 12, realm: "Spirit Realm",   rank: "Spirit Lord",         level: "",     color: "#1a5276", qiReq: 400000,   bodyReq: 5,  desc: "You command vast reserves of spirit power." },
+  { id: 13, realm: "Spirit Realm",   rank: "Spirit King",         level: "",     color: "#a569bd", qiReq: 1200000,  bodyReq: 6,  desc: "Lifespan extends to 10,000 years." },
+  { id: 14, realm: "Spirit Realm",   rank: "Spirit Emperor",      level: "",     color: "#7d3c98", qiReq: 4000000,  bodyReq: 7,  desc: "Emperor of the Spirit Realm." },
+  { id: 15, realm: "Spirit Realm",   rank: "Spirit Sovereign",    level: "",     color: "#6c3483", qiReq: 12000000, bodyReq: 8,  desc: "Lifespan extends to 500,000 years." },
+  { id: 16, realm: "Spirit Realm",   rank: "Spirit Enlightenment",level: "",     color: "#d2b4de", qiReq: 40000000, bodyReq: 9,  desc: "The pinnacle of the Spirit Realm." },
+  // ── DIVINE REALM ──
+  { id: 17, realm: "Divine Realm",   rank: "Divine Warrior",      level: "",     color: "#f39c12", qiReq: 120000000,bodyReq: 10, desc: "You step into the Divine." },
+  { id: 18, realm: "Divine Realm",   rank: "Divine Master",       level: "",     color: "#e67e22", qiReq: 350000000,bodyReq: 11, desc: "The dao of heaven begins to respond." },
+  { id: 19, realm: "Divine Realm",   rank: "Divine Grandmaster",  level: "",     color: "#d35400", qiReq: 1e9,     bodyReq: 12, desc: "Mountains tremble at your passing." },
+  { id: 20, realm: "Divine Realm",   rank: "Divine Lord",         level: "",     color: "#ca6f1e", qiReq: 3e9,     bodyReq: 13, desc: "Lords of heaven kneel." },
+  { id: 21, realm: "Divine Realm",   rank: "Divine King",         level: "",     color: "#e74c3c", qiReq: 1e10,    bodyReq: 14, desc: "A king among the divine." },
+  { id: 22, realm: "Divine Realm",   rank: "Divine Emperor",      level: "",     color: "#c0392b", qiReq: 3e10,    bodyReq: 15, desc: "Heaven bends to your will." },
+  { id: 23, realm: "Divine Realm",   rank: "Divine Sovereign",    level: "",     color: "#922b21", qiReq: 1e11,    bodyReq: 16, desc: "You stand above all Divine." },
+  { id: 24, realm: "Divine Realm",   rank: "Divine Ancestor",     level: "",     color: "#f1948a", qiReq: 3e11,    bodyReq: 17, desc: "The ancestor of all divine cultivators." },
+  // ── IMMORTAL REALM ──
+  { id: 25, realm: "Immortal Realm", rank: "Immortal Ascension",  level: "",     color: "#ffd700", qiReq: 1e12,    bodyReq: 18, desc: "True immortality begins." },
+  { id: 26, realm: "Immortal Realm", rank: "Bronze Immortal",     level: "Early",color: "#cd7f32", qiReq: 3e12,    bodyReq: 19, desc: "The bronze light of immortality surrounds you." },
+  { id: 27, realm: "Immortal Realm", rank: "Bronze Immortal",     level: "Middle",color:"#cd7f32", qiReq: 8e12,    bodyReq: 20, desc: "Your bronze aura deepens." },
+  { id: 28, realm: "Immortal Realm", rank: "Bronze Immortal",     level: "Late", color: "#cd7f32", qiReq: 2e13,    bodyReq: 20, desc: "The peak of Bronze draws near." },
+  { id: 29, realm: "Immortal Realm", rank: "Bronze Immortal",     level: "Peak", color: "#cd7f32", qiReq: 5e13,    bodyReq: 21, desc: "Peak Bronze Immortal." },
+  { id: 30, realm: "Immortal Realm", rank: "Silver Immortal",     level: "",     color: "#c0c0c0", qiReq: 1e14,    bodyReq: 22, desc: "Silver brilliance illuminates heaven." },
+  { id: 31, realm: "Immortal Realm", rank: "Golden Immortal",     level: "",     color: "#ffd700", qiReq: 3e14,    bodyReq: 23, desc: "Golden light engulfs your form." },
+  { id: 32, realm: "Immortal Realm", rank: "True Immortal",       level: "",     color: "#ffffff", qiReq: 1e15,    bodyReq: 24, desc: "You have shed all mortal limitations." },
+];
+
+// ── Body Cultivation Stages
+const BODY_STAGES = [
+  { id: 0,  name: "Mortal Body",          color: "#888",    req: 0,      bonus: { atk: 0,  def: 0,  hp: 0    }, desc: "Unrefined flesh and bone." },
+  { id: 1,  name: "Tempered Skin",         color: "#a08060", req: 100,   bonus: { atk: 5,  def: 8,  hp: 50   }, desc: "Skin toughened like leather." },
+  { id: 2,  name: "Tempered Flesh",        color: "#b08050", req: 350,   bonus: { atk: 12, def: 15, hp: 120  }, desc: "Muscles like iron cords." },
+  { id: 3,  name: "Tempered Bone",         color: "#c09060", req: 800,   bonus: { atk: 25, def: 30, hp: 250  }, desc: "Bones reinforced with Qi." },
+  { id: 4,  name: "Bone Forging",          color: "#d0a070", req: 2000,  bonus: { atk: 50, def: 55, hp: 500  }, desc: "Bones gleam with inner light." },
+  { id: 5,  name: "Blood Refinement",      color: "#cc4444", req: 5000,  bonus: { atk: 90, def: 90, hp: 900  }, desc: "Blood carries spiritual power." },
+  { id: 6,  name: "Marrow Cleansing",      color: "#dd3333", req: 12000, bonus: { atk: 150, def: 140, hp: 1500 }, desc: "Marrow cleared of impurities." },
+  { id: 7,  name: "Organ Refinement",      color: "#ee2222", req: 30000, bonus: { atk: 250, def: 220, hp: 2800 }, desc: "Five organs bathed in immortal energy." },
+  { id: 8,  name: "Perfect Foundation",    color: "#ff8844", req: 80000, bonus: { atk: 400, def: 350, hp: 5000 }, desc: "Perfect physical foundation achieved." },
+  { id: 9,  name: "Spirit Body",           color: "#ffaa44", req: 200000,bonus: { atk: 700, def: 600, hp: 9000 }, desc: "Body radiates spiritual light." },
+  { id: 10, name: "Divine Body - Early",   color: "#ffcc44", req: 500000,bonus: { atk: 1200,def: 1000,hp: 16000}, desc: "The divine body emerges." },
+  { id: 11, name: "Divine Body - Middle",  color: "#ffdd55", req: 1.5e6, bonus: { atk: 2000,def: 1600,hp: 28000}, desc: "Divine body matures." },
+  { id: 12, name: "Divine Body - Peak",    color: "#ffee66", req: 5e6,   bonus: { atk: 3500,def: 2800,hp: 50000}, desc: "Peak divine body." },
+  { id: 13, name: "Immortal Body",         color: "#fffaa0", req: 2e7,   bonus: { atk: 6000,def: 5000,hp: 100000}, desc: "Body transcends mortality." },
+  { id: 14, name: "Celestial Body",        color: "#ffffff", req: 1e8,   bonus: { atk: 12000,def: 10000,hp: 250000}, desc: "Heaven Refining Physique awakens." },
+];
+
+// ── Scriptures (Techniques for cultivating Qi faster)
+const SCRIPTURES = [
+  { id: "basic_qi",       name: "Basic Qi Gathering Technique",  rank: "Mortal", icon: "📜", qiMult: 1.0,  bodMult: 1.0, cost: 0,     desc: "The most basic method of gathering Qi.", unlockStage: 0  },
+  { id: "wind_breath",    name: "Wind Breath Sutra",             rank: "Mortal", icon: "🌬️", qiMult: 1.3,  bodMult: 1.0, cost: 500,   desc: "Circulate Qi like wind through your meridians.", unlockStage: 1 },
+  { id: "earth_heart",    name: "Earth Heart Scripture",         rank: "Earth",  icon: "🌍", qiMult: 1.8,  bodMult: 1.2, cost: 2000,  desc: "Draw the earth's deep power into your dantian.", unlockStage: 3 },
+  { id: "iron_body_art",  name: "Iron Body Art",                 rank: "Earth",  icon: "🪨", qiMult: 1.5,  bodMult: 2.0, cost: 3000,  desc: "Specialized for body tempering.", unlockStage: 4 },
+  { id: "heavens_secret", name: "Heaven's Secret Art",           rank: "Heaven", icon: "☁️", qiMult: 2.8,  bodMult: 1.8, cost: 15000, desc: "Harness the mysterious power of the heavens.", unlockStage: 7 },
+  { id: "sky_devouring",  name: "Sky Devouring Scripture",       rank: "Heaven", icon: "🌌", qiMult: 3.5,  bodMult: 2.5, cost: 30000, desc: "Devour the Qi of heaven and earth.", unlockStage: 9 },
+  { id: "divine_radiance",name: "Divine Radiance Cultivation",   rank: "Divine", icon: "✨", qiMult: 5.5,  bodMult: 3.5, cost: 150000,desc: "Divine light purifies and amplifies all cultivation.", unlockStage: 11 },
+  { id: "true_dragon",    name: "True Dragon Scripture",         rank: "Ancient",icon: "🐉", qiMult: 9.0,  bodMult: 6.0, cost: 800000,desc: "The scripture of the True Dragon bloodline.", unlockStage: 15 },
+  { id: "heaven_refining",name: "Heaven Refining Art",           rank: "Celestial",icon:"🌟",qiMult: 20.0, bodMult: 15.0,cost: 5000000,desc: "Yuan's legendary Celestial-ranked technique.", unlockStage: 20 },
+];
+
+// ── Combat Skills
+const SKILLS = [
+  { id: "basic_strike",    name: "Basic Strike",         rank: "Mortal",   icon: "⚔️",  dmgMult: 1.0,  qiCost: 0,    desc: "A simple physical strike.", unlockStage: 0 },
+  { id: "thousand_knife",  name: "Thousand Knife Technique",rank:"Mortal", icon: "🗡️",  dmgMult: 1.5,  qiCost: 15,   desc: "Send dozens of Qi-blades at the enemy.", unlockStage: 1 },
+  { id: "wind_blades",     name: "Wind Blades",          rank: "Mortal",   icon: "💨",  dmgMult: 1.8,  qiCost: 25,   desc: "Razor sharp condensed wind slices.", unlockStage: 2 },
+  { id: "bloody_sword",    name: "Bloody Sword Strike",  rank: "Earth",    icon: "🩸",  dmgMult: 2.5,  qiCost: 60,   desc: "Infuse your strike with blood essence.", unlockStage: 3 },
+  { id: "heavenly_fire",   name: "Heavenly Fire Control",rank: "Earth",    icon: "🔥",  dmgMult: 3.2,  qiCost: 100,  desc: "Control heavenly fire to burn enemies.", unlockStage: 5 },
+  { id: "demon_sealing",   name: "Demon Sealing Strike", rank: "Heaven",   icon: "🔱",  dmgMult: 5.0,  qiCost: 250,  desc: "The art of the Demon Sealing Clan.", unlockStage: 8 },
+  { id: "jade_palm",       name: "Jade Divine Palm",     rank: "Heaven",   icon: "🖐️",  dmgMult: 6.5,  qiCost: 400,  desc: "A palm imbued with pure heavenly Qi.", unlockStage: 10 },
+  { id: "dragons_gaze",    name: "Dragon's Gaze",        rank: "Ancient",  icon: "👁️",  dmgMult: 12.0, qiCost: 1200, desc: "The Ancient-rank technique Yuan mastered in 2 days!", unlockStage: 14 },
+  { id: "void_strike",     name: "Heaven's Supremacy",   rank: "Mythic",   icon: "🌀",  dmgMult: 25.0, qiCost: 5000, desc: "Strike from the void of heaven itself.", unlockStage: 18 },
+];
+
+// ── Areas (map locations)
+const AREAS = [
+  { id: "starting_village", name: "Starting Village",    icon: "🏘️",  minStage: 0,  maxStage: 4,  spiritStoneRate: 1,   color: "#4a7a4a", desc: "A peaceful village for new cultivators." },
+  { id: "spirit_forest",    name: "Spirit Beast Forest", icon: "🌲",  minStage: 2,  maxStage: 8,  spiritStoneRate: 2,   color: "#2d6a2d", desc: "Ancient forest teeming with spirit beasts." },
+  { id: "jade_valley",      name: "Jade Spirit Valley",  icon: "💚",  minStage: 5,  maxStage: 12, spiritStoneRate: 4,   color: "#2d6a4f", desc: "Valley rich with concentrated spiritual energy." },
+  { id: "dragon_mountain",  name: "Dragon Spiral Mountain",icon:"⛰️", minStage: 9,  maxStage: 16, spiritStoneRate: 8,   color: "#6a4a2d", desc: "The mountain where the Dragon Essence Temple resides." },
+  { id: "mystic_realm",     name: "Mystic Realm",        icon: "🌌",  minStage: 14, maxStage: 22, spiritStoneRate: 20,  color: "#4a2d6a", desc: "A hidden realm with unimaginable treasures." },
+  { id: "nine_heavens",     name: "Nine Heavens",        icon: "☁️",  minStage: 20, maxStage: 32, spiritStoneRate: 100, color: "#1a1a4a", desc: "The immortal plane of the Nine Heavens." },
+];
+
+// ── Enemies (by area)
+const ENEMIES_BY_AREA = {
+  starting_village: [
+    { name: "Wild Wolf",          hp: 50,    atk: 8,   def: 2,  xp: 30,   gold: 8,   sStones: 1, elite: false },
+    { name: "Jade Frog",          hp: 120,   atk: 15,  def: 5,  xp: 80,   gold: 20,  sStones: 3, elite: true  },
+    { name: "Rogue Apprentice",   hp: 200,   atk: 25,  def: 8,  xp: 150,  gold: 35,  sStones: 5, elite: false },
+  ],
+  spirit_forest: [
+    { name: "Demonic Spider",     hp: 400,   atk: 45,  def: 15, xp: 300,  gold: 80,  sStones: 10, elite: false },
+    { name: "Black Beast",        hp: 800,   atk: 80,  def: 25, xp: 600,  gold: 150, sStones: 20, elite: true  },
+    { name: "Forest Demon",       hp: 1500,  atk: 130, def: 40, xp: 1200, gold: 300, sStones: 40, elite: false },
+  ],
+  jade_valley: [
+    { name: "Corrupted Brown Drake",hp: 3000, atk: 200,  def: 70,  xp: 2500,  gold: 600,  sStones: 80,  elite: true },
+    { name: "Spirit Serpent",      hp: 6000,  atk: 350,  def: 120, xp: 5000,  gold: 1200, sStones: 150, elite: false },
+    { name: "Mutated Spirit",      hp: 12000, atk: 600,  def: 200, xp: 10000, gold: 2500, sStones: 300, elite: true },
+  ],
+  dragon_mountain: [
+    { name: "Great Violent Toad",  hp: 30000, atk: 1200, def: 400, xp: 25000, gold: 6000, sStones: 800, elite: true },
+    { name: "Dragon Guard",        hp: 80000, atk: 3000, def: 900, xp: 70000, gold: 15000,sStones: 2000,elite: false },
+    { name: "Ancient Dragon Cub",  hp: 200000,atk: 8000, def: 2000,xp: 200000,gold: 50000,sStones: 6000,elite: true },
+  ],
+  mystic_realm: [
+    { name: "Oblivion Mantis",     hp: 5e5,   atk: 20000, def: 5000, xp: 500000, gold: 100000,sStones: 15000, elite: true },
+    { name: "Vanishing Spirit",    hp: 2e6,   atk: 60000, def: 15000,xp: 2000000,gold: 400000,sStones: 50000, elite: true },
+    { name: "Flaming Boar God",    hp: 8e6,   atk: 180000,def: 45000,xp: 8000000,gold: 1500000,sStones:150000, elite: true },
+  ],
+  nine_heavens: [
+    { name: "Celestial Soldier",   hp: 5e7,  atk: 800000, def: 200000,xp: 5e7,  gold: 5e6, sStones: 500000, elite: false },
+    { name: "Divine Demon",        hp: 2e8,  atk: 3e6,    def: 800000,xp: 2e8,  gold: 2e7, sStones: 2e6,    elite: true  },
+    { name: "Heaven Tribulation Beast",hp:1e9,atk:1e7,    def:3e6,    xp: 1e9,  gold: 1e8, sStones: 1e7,    elite: true  },
+  ],
+};
+
+// ── Items
+const ITEMS = [
+  { id: "qi_pill",        name: "Qi Gathering Pill",        icon: "💊", type: "consumable", grade: "Ungraded", cost: 100,  effect: { qi: 200 },     desc: "Restores 200 Qi to the dantian." },
+  { id: "healing_pill",   name: "Healing Pill",             icon: "🔴", type: "consumable", grade: "Ungraded", cost: 80,   effect: { hp: 100 },     desc: "Restores 100 HP." },
+  { id: "spirit_stone",   name: "Spirit Stone (Low)",       icon: "💎", type: "consumable", grade: "Spirit",   cost: 500,  effect: { qi: 1500, bodyXp: 50 }, desc: "Contains condensed spiritual energy." },
+  { id: "body_pill",      name: "Body Tempering Pill",      icon: "🟠", type: "consumable", grade: "Earth",    cost: 800,  effect: { bodyXp: 200 }, desc: "Greatly aids body cultivation." },
+  { id: "xp_elixir",      name: "Comprehension Elixir",     icon: "🧪", type: "consumable", grade: "Heaven",   cost: 3000, effect: { xp: 500 },     desc: "Accelerates skill comprehension." },
+  { id: "divine_pill",    name: "Divine Grade Qi Pill",     icon: "✨", type: "consumable", grade: "Divine",   cost: 20000,effect: { qi: 50000 },  desc: "A pill of the highest purity." },
+  { id: "tempering_ginseng",name:"Perfect Tempering Ginseng",icon:"🌿",type: "consumable", grade: "Celestial",cost: 500000,effect: { bodyXp: 50000, atk: 200, def: 200 }, desc: "Yuan's legendary body tempering ingredient." },
+];
+
+// ── Achievements
+const ACHIEVEMENTS_DATA = [
+  { id: "first_blood",     title: "First Blood",                    desc: "Defeat your first enemy.",        icon: "⚔️",  check: (g) => g.totalKills >= 1 },
+  { id: "100_kills",       title: "Demon Slayer",                   desc: "Defeat 100 enemies.",             icon: "💀",  check: (g) => g.totalKills >= 100 },
+  { id: "spirit_warrior",  title: "Spirit Warrior",                 desc: "Reach Spirit Warrior rank.",      icon: "🌟",  check: (g) => g.stageId >= 9 },
+  { id: "first_earth_tech",title: "Earth Technique Scholar",        desc: "Learn an Earth-rank technique.",  icon: "🌍",  check: (g) => g.equippedSkill === "bloody_sword" || g.unlockedSkills.includes("bloody_sword") },
+  { id: "body_refiner",    title: "Body Refiner",                   desc: "Reach Tempered Bone stage.",      icon: "🦴",  check: (g) => g.bodyStageId >= 3 },
+  { id: "spirit_king",     title: "Crowned Spirit King",            desc: "Reach Spirit King rank.",         icon: "👑",  check: (g) => g.stageId >= 13 },
+  { id: "divine_body",     title: "Divine Body Forged",             desc: "Achieve Divine Body stage.",      icon: "⚡",  check: (g) => g.bodyStageId >= 10 },
+  { id: "million_gold",    title: "Lord of Wealth",                 desc: "Accumulate 1,000,000 gold.",      icon: "🪙",  check: (g) => g.totalGoldEarned >= 1000000 },
+  { id: "dragon_gaze",     title: "Ancient Technique Wielder",      desc: "Learn Dragon's Gaze.",            icon: "👁️",  check: (g) => g.unlockedSkills.includes("dragons_gaze") },
+  { id: "immortal",        title: "True Immortal",                  desc: "Ascend to the Immortal Realm.",   icon: "☀️",  check: (g) => g.stageId >= 25 },
+  { id: "celestial_body",  title: "Heaven Refining Physique",       desc: "Achieve the Celestial Body.",     icon: "🌌",  check: (g) => g.bodyStageId >= 14 },
+  { id: "perfect_scripture",title:"Heavenly Scripture Master",      desc: "Equip a Celestial-ranked scripture.",icon:"📖",check: (g) => g.equippedScripture === "heaven_refining" },
+];
+
+// ─── Format big numbers
+function fmt(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + "T";
+  if (n >= 1e9)  return (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6)  return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3)  return (n / 1e3).toFixed(1) + "K";
+  return Math.floor(n).toString();
+}
+
+// ─── Initial game state
+const INIT = {
+  name: "Yuan",
+  stageId: 0,           // index in CULTIVATION_STAGES
+  qi: 0,                // current qi toward next stage
+  bodyStageId: 0,       // index in BODY_STAGES
+  bodyXp: 0,            // current body XP toward next stage
+  hp: 200, maxHp: 200,
+  atk: 15, def: 8, spd: 12, lck: 10,
+  gold: 200,
+  spiritStones: 0,
+  totalGoldEarned: 200,
+  fame: 0,
+  equippedScripture: "basic_qi",
+  equippedSkill: "basic_strike",
+  unlockedSkills: ["basic_strike"],
+  unlockedScriptures: ["basic_qi"],
+  inventory: [
+    { ...ITEMS[0], qty: 5 },
+    { ...ITEMS[1], qty: 3 },
+  ],
+  currentArea: "starting_village",
+  achievements: [],
+  log: ["⚡ Welcome to Cultivation Online! Your journey to immortality begins now."],
+  totalKills: 0,
+  isNew: true,
+};
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║                  MAIN COMPONENT                         ║
+// ╚══════════════════════════════════════════════════════════╝
+
+export default function CultivationOnline() {
+  const [g, setG] = useState({ ...INIT });
+  const [view, setView] = useState("main");
+  const [battle, setBattle] = useState(null);
+  const [notif, setNotif] = useState([]);
+  const [toast, setToast] = useState(null);     // achievement toast
+  const [meditating, setMeditating] = useState(false);
+  const [training, setTraining] = useState(false);
+  const [showAscend, setShowAscend] = useState(false);
+  const [showBodyAscend, setShowBodyAscend] = useState(false);
+  const medRef = useRef(null);
+  const trainRef = useRef(null);
+  const gRef = useRef(g);
+  gRef.current = g;
+  const achievedRef = useRef(new Set(g.achievements));
+
+  // ── Helpers
+  const addLog = (msg) => setG(p => ({ ...p, log: [msg, ...p.log.slice(0, 79)] }));
+  const showNotif = (msg, color = "#f5c542", dur = 2500) => {
+    const id = Date.now() + Math.random();
+    setNotif(p => [...p, { id, msg, color }]);
+    setTimeout(() => setNotif(p => p.filter(n => n.id !== id)), dur);
+  };
+
+  // ── Check achievements
+  const checkAchievements = useCallback((state) => {
+    ACHIEVEMENTS_DATA.forEach(a => {
+      if (!achievedRef.current.has(a.id) && a.check(state)) {
+        achievedRef.current.add(a.id);
+        setG(p => ({ ...p, achievements: [...p.achievements, a.id] }));
+        setToast(a);
+        setTimeout(() => setToast(null), 5000);
+        showNotif(`🏆 Achievement: ${a.title}`, "#ffd700", 4000);
+      }
+    });
+  }, []);
+
+  // ── Meditate (Qi cultivation)
+  const toggleMeditate = () => {
+    if (meditating) {
+      clearInterval(medRef.current);
+      setMeditating(false);
+      addLog("🧘 Ended meditation.");
+      return;
+    }
+    if (training) { clearInterval(trainRef.current); setTraining(false); }
+    setMeditating(true);
+    addLog("🧘 Entered deep meditation...");
+    medRef.current = setInterval(() => {
+      setG(p => {
+        const scripture = SCRIPTURES.find(s => s.id === p.equippedScripture) || SCRIPTURES[0];
+        const stage = CULTIVATION_STAGES[p.stageId];
+        const nextStage = CULTIVATION_STAGES[p.stageId + 1];
+        if (!nextStage) return p;
+        const base = 1 + p.stageId * 0.3 + p.spd * 0.1;
+        const gain = base * scripture.qiMult * (1 + p.lck / 200);
+        const newQi = p.qi + gain;
+        const np = { ...p, qi: newQi };
+        checkAchievements(np);
+        return np;
+      });
+    }, 400);
+  };
+
+  // ── Train body
+  const toggleTrain = () => {
+    if (training) {
+      clearInterval(trainRef.current);
+      setTraining(false);
+      addLog("💪 Ended body training.");
+      return;
+    }
+    if (meditating) { clearInterval(medRef.current); setMeditating(false); }
+    setTraining(true);
+    addLog("💪 Began body tempering...");
+    trainRef.current = setInterval(() => {
+      setG(p => {
+        const scripture = SCRIPTURES.find(s => s.id === p.equippedScripture) || SCRIPTURES[0];
+        const nextBody = BODY_STAGES[p.bodyStageId + 1];
+        if (!nextBody) return p;
+        const gain = (1 + p.stageId * 0.2 + p.atk * 0.05) * scripture.bodMult;
+        const np = { ...p, bodyXp: p.bodyXp + gain };
+        checkAchievements(np);
+        return np;
+      });
+    }, 400);
+  };
+
+  // ── Ascend cultivation
+  const ascendCultivation = () => {
+    const p = gRef.current;
+    const stage = CULTIVATION_STAGES[p.stageId];
+    const nextStage = CULTIVATION_STAGES[p.stageId + 1];
+    if (!nextStage) return;
+    if (p.qi < stage.qiReq) { showNotif(`Need ${fmt(stage.qiReq)} Qi!`, "#ff4f7b"); return; }
+    if (p.bodyStageId < stage.bodyReq) { showNotif(`Body cultivation insufficient! Need ${BODY_STAGES[stage.bodyReq]?.name}`, "#ff4f7b"); return; }
+    const newId = p.stageId + 1;
+    const newStage = CULTIVATION_STAGES[newId];
+    setG(prev => {
+      const newMaxHp = Math.floor(200 + newId * 80 + prev.bodyStageId * 40);
+      const newAtk = Math.floor(15 + newId * 12 + prev.bodyStageId * 8);
+      const newDef = Math.floor(8 + newId * 7 + prev.bodyStageId * 5);
+      const np = {
+        ...prev,
+        stageId: newId,
+        qi: 0,
+        maxHp: newMaxHp,
+        hp: newMaxHp,
+        atk: newAtk,
+        def: newDef,
+        spd: Math.floor(12 + newId * 2),
+        lck: Math.floor(10 + newId * 1.5),
+        log: [`🌟 Ascended to ${newStage.rank}${newStage.level ? " " + newStage.level : ""}!`, ...prev.log],
+        fame: prev.fame + 50 * newId,
+      };
+      checkAchievements(np);
+      return np;
+    });
+    showNotif(`🌟 Ascended to ${newStage.rank}!`, newStage.color, 4000);
+    setShowAscend(false);
+  };
+
+  // ── Ascend body cultivation
+  const ascendBody = () => {
+    const p = gRef.current;
+    const nextBody = BODY_STAGES[p.bodyStageId + 1];
+    if (!nextBody) return;
+    if (p.bodyXp < nextBody.req) { showNotif(`Need ${fmt(nextBody.req)} Body XP!`, "#ff4f7b"); return; }
+    setG(prev => {
+      const nb = BODY_STAGES[prev.bodyStageId + 1];
+      const newAtk = prev.atk + nb.bonus.atk;
+      const newDef = prev.def + nb.bonus.def;
+      const newMaxHp = prev.maxHp + nb.bonus.hp;
+      const np = {
+        ...prev,
+        bodyStageId: prev.bodyStageId + 1,
+        bodyXp: prev.bodyXp - nb.req,
+        maxHp: newMaxHp,
+        hp: Math.min(prev.hp + nb.bonus.hp, newMaxHp),
+        atk: newAtk,
+        def: newDef,
+        log: [`💪 Body advanced to ${nb.name}!`, ...prev.log],
+      };
+      checkAchievements(np);
+      return np;
+    });
+    showNotif(`💪 Body advanced to ${nextBody.name}!`, nextBody.color, 3000);
+    setShowBodyAscend(false);
+  };
+
+  // ── Explore / battle
+  const explore = () => {
+    const p = gRef.current;
+    const area = AREAS.find(a => a.id === p.currentArea);
+    const pool = ENEMIES_BY_AREA[p.currentArea] || ENEMIES_BY_AREA.starting_village;
+    const eTemplate = pool[Math.floor(Math.random() * pool.length)];
+    const scaleMult = 1 + (p.stageId * 0.15);
+    const enemy = {
+      ...eTemplate,
+      maxHp: Math.floor(eTemplate.hp * scaleMult),
+      currentHp: Math.floor(eTemplate.hp * scaleMult),
+      atk: Math.floor(eTemplate.atk * scaleMult),
+      def: Math.floor(eTemplate.def * scaleMult),
+    };
+    setBattle({ enemy, playerHp: p.hp, log: [`🐉 ${enemy.name} appears!${enemy.elite ? " ⚠️ ELITE!" : ""}`], ended: false });
+    setView("battle");
+  };
+
+  // ── Battle action
+  const doBattleAction = (type) => {
+    if (!battle || battle.ended) return;
+    const p = gRef.current;
+    let bLog = [...battle.log];
+    let en = { ...battle.enemy };
+    let playerHp = battle.playerHp;
+    let ended = false, won = false;
+
+    if (type === "flee") {
+      const chance = 0.45 + (p.spd / 200);
+      if (Math.random() < chance) {
+        setBattle(null); setView("main");
+        showNotif("💨 Escaped successfully!", "#4de8b0");
+        return;
+      }
+      bLog.push("❌ Flee failed!");
+    } else {
+      const skill = SKILLS.find(s => s.id === (type === "skill" ? p.equippedSkill : "basic_strike"));
+      if (p.qi < (skill?.qiCost || 0) && type === "skill") { showNotif("Not enough Qi!", "#ff4f7b"); return; }
+      const crit = Math.random() < p.lck / 150;
+      let dmg = Math.floor((p.atk * (skill?.dmgMult || 1)) * (0.85 + Math.random() * 0.3) * (crit ? 2 : 1));
+      dmg = Math.max(1, dmg - Math.floor(en.def * 0.3));
+      en.currentHp = Math.max(0, en.currentHp - dmg);
+      if (skill?.qiCost) setG(prev => ({ ...prev, qi: Math.max(0, prev.qi - skill.qiCost) }));
+      bLog.push(`⚔️ ${skill?.name || "Attack"}: ${fmt(dmg)} dmg${crit ? " 💥 CRIT!" : ""}`);
+
+      if (en.currentHp <= 0) {
+        ended = true; won = true;
+        bLog.push(`✨ ${en.name} defeated!`);
+        bLog.push(`+${fmt(en.xp)} XP, +${fmt(en.gold)} Gold, +${fmt(en.sStones)} Spirit Stones`);
+        setG(prev => {
+          const newGold = prev.gold + en.gold;
+          const newStones = prev.spiritStones + en.sStones;
+          const newFame = prev.fame + (en.elite ? 20 : 5);
+          const newKills = prev.totalKills + 1;
+          const newGoldTotal = prev.totalGoldEarned + en.gold;
+          // Drop item?
+          let inv = [...prev.inventory];
+          const dropChance = 0.2 + prev.lck / 300 + (en.elite ? 0.2 : 0);
+          if (Math.random() < dropChance) {
+            const item = ITEMS[Math.floor(Math.random() * Math.min(4 + prev.stageId, ITEMS.length))];
+            const ex = inv.find(i => i.id === item.id);
+            if (ex) ex.qty++; else inv.push({ ...item, qty: 1 });
+          }
+          const np = {
+            ...prev, gold: newGold, spiritStones: newStones, fame: newFame,
+            totalKills: newKills, totalGoldEarned: newGoldTotal, inventory: inv,
+            hp: playerHp,
+          };
+          checkAchievements(np);
+          return np;
+        });
+      }
+    }
+
+    // Enemy attacks
+    if (!ended) {
+      const eDmg = p.godMode ? 0 : Math.max(1, Math.floor(en.atk * (0.8 + Math.random() * 0.4)) - Math.floor(p.def * 0.5));
+      playerHp = Math.max(0, playerHp - eDmg);
+      bLog.push(`👹 ${en.name}: ${fmt(eDmg)} dmg to you`);
+      setG(prev => ({ ...prev, hp: playerHp }));
+      if (playerHp <= 0) {
+        ended = true; won = false;
+        bLog.push("💀 You were defeated...");
+        setG(prev => ({ ...prev, hp: Math.floor(prev.maxHp * 0.25), gold: Math.floor(prev.gold * 0.9) }));
+      }
+    }
+
+    setBattle(prev => ({ ...prev, enemy: en, playerHp, log: bLog.slice(-8), ended, won }));
+    if (ended) {
+      setTimeout(() => { setView("main"); setBattle(null); if (won) showNotif("⚔️ Victory!", "#4de8b0"); else showNotif("💀 Defeated... you survived.", "#ff4f7b"); }, 1800);
+    }
+  };
+
+  // ── Use item
+  const useItem = (itemId) => {
+    setG(p => {
+      const inv = [...p.inventory];
+      const idx = inv.findIndex(i => i.id === itemId);
+      if (idx < 0 || inv[idx].qty <= 0) return p;
+      const item = inv[idx];
+      let changes = {};
+      const e = item.effect;
+      if (e.qi)     changes.qi = Math.min(p.qi + e.qi, CULTIVATION_STAGES[p.stageId]?.qiReq * 0.99 || 9999);
+      if (e.hp)     changes.hp = Math.min(p.hp + e.hp, p.maxHp);
+      if (e.bodyXp) changes.bodyXp = p.bodyXp + e.bodyXp;
+      if (e.xp)     { /* handled separately */ }
+      if (e.atk)    changes.atk = p.atk + e.atk;
+      if (e.def)    changes.def = p.def + e.def;
+      inv[idx] = { ...item, qty: item.qty - 1 };
+      showNotif(`Used ${item.name}!`, "#4de8b0");
+      return { ...p, ...changes, inventory: inv.filter(i => i.qty > 0) };
+    });
+  };
+
+  // ── Buy item
+  const buyItem = (item) => {
+    const p = gRef.current;
+    const cost = item.cost;
+    if (p.spiritStones < cost) { showNotif("Not enough Spirit Stones!", "#ff4f7b"); return; }
+    setG(prev => {
+      const inv = [...prev.inventory];
+      const ex = inv.find(i => i.id === item.id);
+      if (ex) ex.qty++; else inv.push({ ...item, qty: 1 });
+      return { ...prev, spiritStones: prev.spiritStones - cost, inventory: inv };
+    });
+    showNotif(`Bought ${item.name}!`, "#4de8b0");
+  };
+
+  // ── Learn Scripture
+  const learnScripture = (sid) => {
+    const s = SCRIPTURES.find(x => x.id === sid);
+    const p = gRef.current;
+    if (!s || p.unlockedScriptures.includes(sid)) return;
+    if (p.stageId < s.unlockStage) { showNotif(`Requires ${CULTIVATION_STAGES[s.unlockStage]?.rank}!`, "#ff4f7b"); return; }
+    if (p.spiritStones < s.cost) { showNotif("Not enough Spirit Stones!", "#ff4f7b"); return; }
+    setG(prev => ({
+      ...prev,
+      spiritStones: prev.spiritStones - s.cost,
+      unlockedScriptures: [...prev.unlockedScriptures, sid],
+      log: [`📖 Learned scripture: ${s.name}!`, ...prev.log],
+    }));
+    showNotif(`📖 Learned ${s.name}!`, "#f5c542");
+  };
+
+  // ── Learn Skill
+  const learnSkill = (sid) => {
+    const sk = SKILLS.find(x => x.id === sid);
+    const p = gRef.current;
+    if (!sk || p.unlockedSkills.includes(sid)) return;
+    if (p.stageId < sk.unlockStage) { showNotif(`Requires higher cultivation!`, "#ff4f7b"); return; }
+    const cost = sk.unlockStage * 500 + 200;
+    if (p.spiritStones < cost) { showNotif("Not enough Spirit Stones!", "#ff4f7b"); return; }
+    setG(prev => {
+      const np = {
+        ...prev,
+        spiritStones: prev.spiritStones - cost,
+        unlockedSkills: [...prev.unlockedSkills, sid],
+        log: [`⚡ Mastered skill: ${sk.name}!`, ...prev.log],
+      };
+      checkAchievements(np);
+      return np;
+    });
+    showNotif(`⚡ Mastered ${sk.name}!`, "#5cb8ff");
+  };
+
+  // ── Rest
+  const rest = () => {
+    setG(p => ({ ...p, hp: p.maxHp }));
+    showNotif("Fully rested!", "#4de8b0");
+  };
+
+  // ── CHEAT ENGINE
+  useEffect(() => {
+    window.CHEAT = {
+      help: () => console.log(`%c
+╔══════════════════════════════════════════════╗
+║        CULTIVATION ONLINE — CHEAT ENGINE     ║
+╠══════════════════════════════════════════════╣
+║ CHEAT.qi(amount)         Add Qi              ║
+║ CHEAT.gold(amount)       Add Gold            ║
+║ CHEAT.stones(amount)     Add Spirit Stones   ║
+║ CHEAT.body(amount)       Add Body XP         ║
+║ CHEAT.ascend()           Force Cultivation↑  ║
+║ CHEAT.bodyAscend()       Force Body Stage↑   ║
+║ CHEAT.setStage(n)        Set stage (0-32)    ║
+║ CHEAT.setBody(n)         Set body stage(0-14)║
+║ CHEAT.maxStats()         9999 all stats      ║
+║ CHEAT.godMode()          Toggle invincibility║
+║ CHEAT.fame(amount)       Add fame            ║
+║ CHEAT.learnAll()         Unlock all skills   ║
+║ CHEAT.learnAllScriptures() All scriptures    ║
+║ CHEAT.giveItem(id, qty)  Give item           ║
+║   Item IDs: qi_pill, healing_pill,           ║
+║   spirit_stone, body_pill, xp_elixir,        ║
+║   divine_pill, tempering_ginseng             ║
+║ CHEAT.reset()            Reset game          ║
+╚══════════════════════════════════════════════╝
+`, "color:#f5c542;font-family:monospace;font-size:13px"),
+
+      qi: (n = 10000) => {
+        setG(p => { const v = p.qi + n; console.log(`%c[CHEAT] +${n} Qi`, "color:#5cb8ff;font-weight:bold"); return { ...p, qi: v }; });
+      },
+      gold: (n = 50000) => {
+        setG(p => { console.log(`%c[CHEAT] +${n} Gold`, "color:#ffd700;font-weight:bold"); return { ...p, gold: p.gold + n, totalGoldEarned: p.totalGoldEarned + n }; });
+      },
+      stones: (n = 50000) => {
+        setG(p => { console.log(`%c[CHEAT] +${n} Spirit Stones`, "color:#a569bd;font-weight:bold"); return { ...p, spiritStones: p.spiritStones + n }; });
+      },
+      body: (n = 100000) => {
+        setG(p => { console.log(`%c[CHEAT] +${n} Body XP`, "color:#e74c3c;font-weight:bold"); return { ...p, bodyXp: p.bodyXp + n }; });
+      },
+      fame: (n = 10000) => {
+        setG(p => { console.log(`%c[CHEAT] +${n} Fame`, "color:#ffd700;font-weight:bold"); return { ...p, fame: p.fame + n }; });
+      },
+      ascend: () => {
+        setG(p => {
+          const ns = Math.min(p.stageId + 1, CULTIVATION_STAGES.length - 1);
+          const stage = CULTIVATION_STAGES[ns];
+          const np = { ...p, stageId: ns, qi: 0, maxHp: 200 + ns * 80, hp: 200 + ns * 80, atk: 15 + ns * 12, def: 8 + ns * 7, log: [`[CHEAT] Ascended to ${stage.rank}`, ...p.log] };
+          achievedRef.current.clear();
+          return np;
+        });
+        console.log(`%c[CHEAT] Cultivation ascended!`, "color:#ffd700;font-weight:bold;font-size:14px");
+      },
+      bodyAscend: () => {
+        setG(p => {
+          const nb = Math.min(p.bodyStageId + 1, BODY_STAGES.length - 1);
+          const bs = BODY_STAGES[nb];
+          const np = { ...p, bodyStageId: nb, bodyXp: 0, atk: p.atk + bs.bonus.atk, def: p.def + bs.bonus.def, maxHp: p.maxHp + bs.bonus.hp, hp: p.maxHp + bs.bonus.hp, log: [`[CHEAT] Body advanced to ${bs.name}`, ...p.log] };
+          return np;
+        });
+        console.log(`%c[CHEAT] Body stage advanced!`, "color:#e74c3c;font-weight:bold");
+      },
+      setStage: (n) => {
+        const s = Math.max(0, Math.min(n, CULTIVATION_STAGES.length - 1));
+        const stage = CULTIVATION_STAGES[s];
+        setG(p => ({ ...p, stageId: s, qi: 0, maxHp: 200 + s * 80, hp: 200 + s * 80, atk: 15 + s * 12, def: 8 + s * 7, log: [`[CHEAT] Set stage to ${stage.rank}`, ...p.log] }));
+        console.log(`%c[CHEAT] Stage set to ${stage.rank}`, "color:#ffd700;font-weight:bold");
+      },
+      setBody: (n) => {
+        const s = Math.max(0, Math.min(n, BODY_STAGES.length - 1));
+        const bs = BODY_STAGES[s];
+        setG(p => ({ ...p, bodyStageId: s, bodyXp: 0 }));
+        console.log(`%c[CHEAT] Body set to ${bs.name}`, "color:#e74c3c;font-weight:bold");
+      },
+      maxStats: () => {
+        setG(p => ({ ...p, atk: 999999, def: 999999, spd: 9999, lck: 999, maxHp: 9999999, hp: 9999999 }));
+        console.log(`%c[CHEAT] All stats maxed!`, "color:#ff4f7b;font-weight:bold;font-size:16px");
+      },
+      godMode: () => {
+        setG(p => { const v = !p.godMode; console.log(`%c[CHEAT] God Mode ${v ? "ENABLED ⚡" : "DISABLED"}`, "color:#ff2020;font-weight:bold;font-size:14px"); return { ...p, godMode: v }; });
+      },
+      learnAll: () => {
+        setG(p => ({ ...p, unlockedSkills: SKILLS.map(s => s.id), equippedSkill: "void_strike" }));
+        console.log(`%c[CHEAT] All skills unlocked!`, "color:#5cb8ff;font-weight:bold");
+      },
+      learnAllScriptures: () => {
+        setG(p => ({ ...p, unlockedScriptures: SCRIPTURES.map(s => s.id), equippedScripture: "heaven_refining" }));
+        console.log(`%c[CHEAT] All scriptures unlocked!`, "color:#f5c542;font-weight:bold");
+      },
+      giveItem: (id, qty = 5) => {
+        const item = ITEMS.find(i => i.id === id);
+        if (!item) { console.log("Available IDs:", ITEMS.map(i => i.id)); return; }
+        setG(p => {
+          const inv = [...p.inventory];
+          const ex = inv.find(i => i.id === id);
+          if (ex) ex.qty += qty; else inv.push({ ...item, qty });
+          return { ...p, inventory: inv };
+        });
+        console.log(`%c[CHEAT] Gave ${qty}x ${item.name}`, "color:#4de8b0;font-weight:bold");
+      },
+      reset: () => {
+        setG({ ...INIT });
+        setView("main");
+        setBattle(null);
+        achievedRef.current = new Set();
+        console.log(`%c[CHEAT] Game reset`, "color:#a0a0a0;font-weight:bold");
+      },
+    };
+    console.log(`%c⚡ CULTIVATION ONLINE — Cheat engine loaded! Type CHEAT.help() for commands.`, "color:#f5c542;font-weight:bold;font-size:14px;background:#0a0812;padding:6px 12px;border-radius:4px");
+    return () => delete window.CHEAT;
+  }, []);
+
+  useEffect(() => () => { clearInterval(medRef.current); clearInterval(trainRef.current); }, []);
+
+  // ──────────────────────────────────────────────────────
+  //  COMPUTED DISPLAY VALUES
+  // ──────────────────────────────────────────────────────
+  const stage = CULTIVATION_STAGES[g.stageId] || CULTIVATION_STAGES[0];
+  const nextStage = CULTIVATION_STAGES[g.stageId + 1];
+  const bodyStage = BODY_STAGES[g.bodyStageId] || BODY_STAGES[0];
+  const nextBody = BODY_STAGES[g.bodyStageId + 1];
+  const scripture = SCRIPTURES.find(s => s.id === g.equippedScripture) || SCRIPTURES[0];
+  const equippedSkillData = SKILLS.find(s => s.id === g.equippedSkill) || SKILLS[0];
+  const qiPct = nextStage ? Math.min(100, (g.qi / stage.qiReq) * 100) : 100;
+  const bodyPct = nextBody ? Math.min(100, (g.bodyXp / nextBody.req) * 100) : 100;
+  const hpPct = Math.max(0, (g.hp / g.maxHp) * 100);
+  const canAscend = nextStage && g.qi >= stage.qiReq && g.bodyStageId >= stage.bodyReq;
+  const canBodyAscend = nextBody && g.bodyXp >= nextBody.req;
+  const currentArea = AREAS.find(a => a.id === g.currentArea) || AREAS[0];
+
+  const RANK_COLORS = { Mortal: "#a0a0a0", Earth: "#8b7355", Heaven: "#5cb8ff", Divine: "#a855f7", Ancient: "#f97316", Mythic: "#ec4899", Supreme: "#06b6d4", Celestial: "#fffbe6" };
+
+  // ──────────────────────────────────────────────────────
+  //  RENDER
+  // ──────────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: "100vh", background: "#050509", color: "#ddd4c8", fontFamily: "'Crimson Text', Georgia, serif", fontSize: "15px", position: "relative", overflow: "hidden" }}>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+        * { box-sizing: border-box; }
+        @keyframes glow { 0%,100%{text-shadow:0 0 6px currentColor,0 0 12px currentColor} 50%{text-shadow:0 0 14px currentColor,0 0 30px currentColor,0 0 50px currentColor} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        @keyframes slideIn { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes toastIn { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+        @keyframes twinkle { 0%,100%{opacity:.05} 50%{opacity:.3} }
+        @keyframes bgMove { from{background-position:0 0} to{background-position:100px 100px} }
+        .btn { background:linear-gradient(135deg,#1e1630 0%,#150f25 100%); border:1px solid #3a2f55; color:#c4b4e4; padding:8px 14px; cursor:pointer; font-family:'Crimson Text',serif; font-size:14px; border-radius:3px; transition:all .2s; letter-spacing:.3px; width:100%; }
+        .btn:hover { background:linear-gradient(135deg,#2e2445 0%,#201838 100%); border-color:#6a4f90; color:#e8d8ff; box-shadow:0 0 10px #6a4f9033; }
+        .btn:active { transform:scale(.97); }
+        .btn-gold { border-color:#c8a832; color:#c8a832; background:linear-gradient(135deg,#2a1f00 0%,#1e1500 100%); }
+        .btn-gold:hover { border-color:#f5c542; color:#f5c542; box-shadow:0 0 12px #f5c54233; }
+        .btn-red { border-color:#c04060; color:#e06080; }
+        .btn-red:hover { border-color:#ff5070; color:#ff7090; box-shadow:0 0 10px #ff507033; }
+        .btn-green { border-color:#30a870; color:#40c880; }
+        .btn-green:hover { border-color:#50e890; color:#60ffa0; }
+        .btn-blue { border-color:#3070c8; color:#5090e8; }
+        .btn-blue:hover { border-color:#5098ff; color:#70b0ff; }
+        .card { background:linear-gradient(135deg,#13102066 0%,#0d0a1866 100%); border:1px solid #2a2040; border-radius:6px; padding:14px; backdrop-filter:blur(3px); }
+        .bar { height:8px; border-radius:4px; background:#12101a; overflow:hidden; }
+        ::-webkit-scrollbar { width:3px; }
+        ::-webkit-scrollbar-track { background:#0a0812; }
+        ::-webkit-scrollbar-thumb { background:#3a2f55; border-radius:2px; }
+        .tab { background:none; border:none; border-bottom:2px solid transparent; color:#6a5a7a; padding:6px 12px; cursor:pointer; font-family:'Crimson Text',serif; font-size:13px; letter-spacing:1px; text-transform:uppercase; transition:all .2s; }
+        .tab.active { border-color:#8a60b0; color:#c8b8e8; }
+        .tab:hover { color:#a890c8; }
+        .grade-Mortal { color:#a0a0a0; }
+        .grade-Earth { color:#b0906a; }
+        .grade-Heaven { color:#5cb8ff; }
+        .grade-Divine { color:#c878ff; }
+        .grade-Ancient { color:#ff8c42; }
+        .grade-Mythic { color:#ff60a0; }
+        .grade-Empyrean { color:#40e0d0; }
+        .grade-Celestial { color:#fffbe6; text-shadow:0 0 8px #fffbe6; }
+        .notice { padding:6px 10px; background:#1a103088; border-left:3px solid #8a60b0; border-radius:0 3px 3px 0; font-size:12px; color:#a090b8; margin-bottom:6px; }
+      `}</style>
+
+      {/* ── Background Particles */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        {Array.from({length:50},(_,i)=>(
+          <div key={i} style={{ position:"absolute", width: 1+Math.random()*2+"px", height:1+Math.random()*2+"px", background:"#fff", borderRadius:"50%", left:Math.random()*100+"%", top:Math.random()*100+"%", opacity:Math.random()*0.3, animation:`twinkle ${2+Math.random()*5}s ${Math.random()*3}s infinite` }} />
+        ))}
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 60% 40% at 30% 20%, #1a082a22, transparent), radial-gradient(ellipse 50% 30% at 80% 70%, #0a1a3022, transparent)" }} />
+      </div>
+
+      {/* ── Achievement Toast */}
+      {toast && (
+        <div style={{ position:"fixed", top:16, right:16, zIndex:1000, animation:"toastIn .4s ease", background:"linear-gradient(135deg,#1a1030,#100a20)", border:"1px solid #ffd700", borderRadius:6, padding:"12px 18px", maxWidth:300, boxShadow:"0 0 30px #ffd70033" }}>
+          <div style={{ fontSize:10, letterSpacing:3, color:"#ffd700", marginBottom:4, textTransform:"uppercase" }}>Achievement Unlocked</div>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <span style={{fontSize:22}}>{toast.icon}</span>
+            <div>
+              <div style={{color:"#ffd700", fontSize:15, fontWeight:600}}>{toast.title}</div>
+              <div style={{color:"#a0909a", fontSize:12}}>{toast.desc}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Notifications */}
+      <div style={{ position:"fixed", top:60, left:"50%", transform:"translateX(-50%)", zIndex:999, display:"flex", flexDirection:"column", gap:4, alignItems:"center", pointerEvents:"none" }}>
+        {notif.map(n => (
+          <div key={n.id} style={{ background:"#12101aee", border:`1px solid ${n.color}`, color:n.color, padding:"6px 18px", borderRadius:3, fontSize:13, fontFamily:"monospace", letterSpacing:1, animation:"slideIn .25s ease", boxShadow:`0 0 14px ${n.color}33`, whiteSpace:"nowrap" }}>
+            {n.msg}
+          </div>
+        ))}
+      </div>
+
+      {/* ── God Mode Badge */}
+      {g.godMode && <div style={{ position:"fixed", top:8, left:8, background:"#aa0000", color:"#fff", padding:"3px 10px", fontSize:10, borderRadius:2, zIndex:999, letterSpacing:2, fontFamily:"monospace" }}>⚡ GOD MODE</div>}
+
+      <div style={{ maxWidth:960, margin:"0 auto", padding:"12px 10px", position:"relative", zIndex:1 }}>
+
+        {/* ══ HEADER ══ */}
+        <div style={{ textAlign:"center", marginBottom:12 }}>
+          <div style={{ fontSize:9, letterSpacing:6, color:"#4a3a5a", textTransform:"uppercase", marginBottom:2 }}>九天仙途 · Cultivation Online</div>
+          <h1 style={{ fontSize:26, margin:0, letterSpacing:2, color:stage.color, animation:"glow 3s infinite", fontWeight:400 }}>{g.name}</h1>
+          <div style={{ fontSize:11, color:"#6a5a7a", letterSpacing:3, marginTop:2 }}>
+            <span style={{color:stage.color}}>{stage.rank}{stage.level ? " · " + stage.level : ""}</span>
+            <span style={{margin:"0 8px", color:"#3a2a4a"}}>|</span>
+            <span style={{color:bodyStage.color}}>{bodyStage.name}</span>
+            <span style={{margin:"0 8px", color:"#3a2a4a"}}>|</span>
+            <span style={{color:"#ffd700"}}>Fame: {fmt(g.fame)}</span>
+          </div>
+        </div>
+
+        {/* ══ STATUS BARS ══ */}
+        <div className="card" style={{ marginBottom:10, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+          {/* HP */}
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#e05060", marginBottom:4 }}>
+              <span>❤️ HP</span><span style={{fontFamily:"monospace"}}>{fmt(g.hp)}/{fmt(g.maxHp)}</span>
+            </div>
+            <div className="bar">
+              <div style={{ width:hpPct+"%", height:"100%", background:"linear-gradient(90deg,#aa1830,#ff3050)", transition:"width .3s" }} />
+            </div>
+          </div>
+          {/* Qi */}
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#5cb8ff", marginBottom:4 }}>
+              <span>⚡ Qi  <span style={{color:"#3a5a7a",fontSize:10}}>({scripture.name.split(" ")[0]} ×{scripture.qiMult})</span></span>
+              <span style={{fontFamily:"monospace"}}>{fmt(g.qi)}/{fmt(stage.qiReq)}</span>
+            </div>
+            <div className="bar" style={{height:10}}>
+              <div style={{ width:Math.min(100,qiPct)+"%", height:"100%", background:`linear-gradient(90deg,#1a60aa,${stage.color})`, transition:"width .4s", boxShadow:qiPct>80?`0 0 8px ${stage.color}66`:undefined }} />
+            </div>
+          </div>
+          {/* Body */}
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:bodyStage.color, marginBottom:4 }}>
+              <span>💪 Body</span><span style={{fontFamily:"monospace"}}>{nextBody ? fmt(g.bodyXp)+"/"+fmt(nextBody.req) : "MAX"}</span>
+            </div>
+            <div className="bar" style={{height:10}}>
+              <div style={{ width:bodyPct+"%", height:"100%", background:`linear-gradient(90deg,#aa3010,${bodyStage.color})`, transition:"width .4s" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* ══ ASCENSION ALERTS ══ */}
+        {canAscend && (
+          <button className="btn btn-gold" onClick={() => setShowAscend(true)} style={{ marginBottom:10, fontSize:14, letterSpacing:1, animation:"pulse 1.5s infinite", padding:"10px" }}>
+            🌟 READY TO ASCEND → {nextStage?.rank}{nextStage?.level ? " " + nextStage.level : ""}
+          </button>
+        )}
+        {canBodyAscend && (
+          <button className="btn btn-red" onClick={() => setShowBodyAscend(true)} style={{ marginBottom:10, fontSize:14, letterSpacing:1, animation:"pulse 1.5s infinite", padding:"10px" }}>
+            💪 BODY BREAKTHROUGH → {nextBody?.name}
+          </button>
+        )}
+
+        {/* ══ ASCENSION MODAL ══ */}
+        {showAscend && (
+          <div style={{ position:"fixed", inset:0, background:"#00000088", zIndex:900, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div className="card" style={{ maxWidth:420, width:"90%", border:`1px solid ${stage.color}`, boxShadow:`0 0 40px ${stage.color}44`, animation:"fadeIn .3s" }}>
+              <div style={{ textAlign:"center", marginBottom:16 }}>
+                <div style={{ fontSize:30, marginBottom:8 }}>🌟</div>
+                <div style={{ fontSize:11, letterSpacing:3, color:"#8a70a0", marginBottom:4 }}>BREAKTHROUGH</div>
+                <div style={{ fontSize:20, color:nextStage?.color }}>{nextStage?.rank}{nextStage?.level ? " · " + nextStage.level : ""}</div>
+                <div style={{ fontSize:12, color:"#6a5a7a", marginTop:6 }}>{nextStage?.desc}</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:12, fontSize:12 }}>
+                {[["HP", fmt(200+g.stageId*80), fmt(200+(g.stageId+1)*80)],["ATK",fmt(g.atk),fmt(15+(g.stageId+1)*12)],["DEF",fmt(g.def),fmt(8+(g.stageId+1)*7)],["SPD",fmt(g.spd),fmt(12+(g.stageId+1)*2)]].map(([k,old,nw])=>(
+                  <div key={k} style={{ background:"#1a122888", borderRadius:3, padding:"6px 10px", display:"flex", justifyContent:"space-between" }}>
+                    <span style={{color:"#7a6a8a"}}>{k}</span><span style={{color:"#6a5a7a"}}>{old} → <span style={{color:"#4de8b0"}}>{nw}</span></span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                <button className="btn btn-gold" onClick={ascendCultivation}>✨ Ascend Now</button>
+                <button className="btn" onClick={() => setShowAscend(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ BODY ASCENSION MODAL ══ */}
+        {showBodyAscend && (
+          <div style={{ position:"fixed", inset:0, background:"#00000088", zIndex:900, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div className="card" style={{ maxWidth:420, width:"90%", border:`1px solid ${nextBody?.color}`, boxShadow:`0 0 30px ${nextBody?.color}44`, animation:"fadeIn .3s" }}>
+              <div style={{ textAlign:"center", marginBottom:16 }}>
+                <div style={{ fontSize:30 }}>💪</div>
+                <div style={{ fontSize:11, letterSpacing:3, color:"#8a70a0" }}>BODY BREAKTHROUGH</div>
+                <div style={{ fontSize:18, color:nextBody?.color, marginTop:6 }}>{nextBody?.name}</div>
+                <div style={{ fontSize:12, color:"#6a5a7a", marginTop:4 }}>{nextBody?.desc}</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6, marginBottom:12, fontSize:12 }}>
+                {[["ATK+",nextBody?.bonus.atk],["DEF+",nextBody?.bonus.def],["HP+",nextBody?.bonus.hp]].map(([k,v])=>(
+                  <div key={k} style={{ background:"#1a122888", borderRadius:3, padding:"6px", textAlign:"center" }}>
+                    <div style={{color:"#7a6a8a",fontSize:10}}>{k}</div>
+                    <div style={{color:"#4de8b0"}}>{fmt(v)}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                <button className="btn btn-red" onClick={ascendBody}>💪 Break Through</button>
+                <button className="btn" onClick={() => setShowBodyAscend(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ MAIN VIEWS ══ */}
+
+        {/* NAVIGATION TABS */}
+        {view !== "battle" && (
+          <div style={{ display:"flex", gap:0, marginBottom:10, borderBottom:"1px solid #2a1f3a", overflowX:"auto" }}>
+            {[["main","⚔️ Cultivate"],["map","🗺️ Map"],["scriptures","📖 Scriptures"],["skills","⚡ Skills"],["inventory","🎒 Inventory"],["shop","🏪 Shop"],["achievements","🏆 Deeds"],["realm","🌍 Realm"]].map(([v,l]) => (
+              <button key={v} className={`tab${view===v?" active":""}`} onClick={() => setView(v)}>{l}</button>
+            ))}
+          </div>
+        )}
+
+        {/* ══ CULTIVATE (MAIN) ══ */}
+        {view === "main" && (
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <div className="card" style={{ marginBottom:12 }}>
+                <div style={{ fontSize:10, letterSpacing:3, color:"#5a4a6a", textTransform:"uppercase", marginBottom:10 }}>Cultivation</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  <button className={`btn${meditating?" btn-gold":""}`} onClick={toggleMeditate} style={{ textAlign:"left", display:"flex", justifyContent:"space-between" }}>
+                    <span>🧘 {meditating?"Stop Meditating":"Meditate"}</span>
+                    {meditating && <span style={{ color:"#f5c542", animation:"pulse 1s infinite", fontSize:11 }}>● +{(1+g.stageId*0.3+g.spd*0.1).toFixed(1)}×{scripture.qiMult}/tick</span>}
+                  </button>
+                  <button className={`btn${training?" btn-red":""}`} onClick={toggleTrain} style={{ textAlign:"left", display:"flex", justifyContent:"space-between" }}>
+                    <span>💪 {training?"Stop Training":"Body Tempering"}</span>
+                    {training && <span style={{ color:"#e06050", animation:"pulse 1s infinite", fontSize:11 }}>● +{(1+g.stageId*0.2+g.atk*0.05).toFixed(1)}×{scripture.bodMult}/tick</span>}
+                  </button>
+                  <button className="btn btn-red" onClick={explore}>⚔️ Explore: {currentArea.name}</button>
+                  <button className="btn btn-green" onClick={rest}>🏮 Meditate & Rest (Full HP)</button>
+                </div>
+              </div>
+
+              <div className="card">
+                <div style={{ fontSize:10, letterSpacing:3, color:"#5a4a6a", textTransform:"uppercase", marginBottom:8 }}>Equipped</div>
+                <div style={{ fontSize:12, display:"flex", flexDirection:"column", gap:6 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", background:"#12101888", borderRadius:3, padding:"6px 10px" }}>
+                    <span style={{color:"#7a6a8a"}}>Scripture</span>
+                    <span className={`grade-${scripture.rank}`}>{scripture.icon} {scripture.name} (×{scripture.qiMult} Qi)</span>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", background:"#12101888", borderRadius:3, padding:"6px 10px" }}>
+                    <span style={{color:"#7a6a8a"}}>Skill</span>
+                    <span className={`grade-${equippedSkillData.rank}`}>{equippedSkillData.icon} {equippedSkillData.name}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="card" style={{ marginBottom:12 }}>
+                <div style={{ fontSize:10, letterSpacing:3, color:"#5a4a6a", textTransform:"uppercase", marginBottom:8 }}>Attributes</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, fontSize:12 }}>
+                  {[["⚔️ ATK",fmt(g.atk)],["🛡️ DEF",fmt(g.def)],["💨 SPD",fmt(g.spd)],["🍀 LCK",fmt(g.lck)],["🪙 Gold",fmt(g.gold)],["💎 Stones",fmt(g.spiritStones)]].map(([k,v])=>(
+                    <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"4px 8px", background:"#12101820", borderRadius:3 }}>
+                      <span style={{color:"#6a5a7a"}}>{k}</span>
+                      <span style={{color:"#c8b8e8", fontFamily:"monospace"}}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card" style={{ height:190, overflow:"hidden" }}>
+                <div style={{ fontSize:10, letterSpacing:3, color:"#5a4a6a", textTransform:"uppercase", marginBottom:8 }}>Chronicle</div>
+                <div style={{ overflowY:"auto", height:150, display:"flex", flexDirection:"column", gap:2 }}>
+                  {g.log.map((l,i)=>(
+                    <div key={i} style={{ fontSize:11.5, color:i===0?"#b8a8d8":"#4a3a5a", borderLeft:i===0?"2px solid #6a4a90":"2px solid transparent", paddingLeft:6, lineHeight:1.4 }}>{l}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ MAP ══ */}
+        {view === "map" && (
+          <div>
+            <div className="notice">Select an area to set as your exploration zone. Areas unlock as your cultivation rises.</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {AREAS.map(area => {
+                const unlocked = g.stageId >= area.minStage;
+                const active = g.currentArea === area.id;
+                return (
+                  <div key={area.id} style={{ background:`linear-gradient(135deg, ${area.color}22, transparent)`, border:`1px solid ${active?"#f5c542":unlocked?"#3a2f55":"#1a1830"}`, borderRadius:6, padding:"12px 16px", opacity:unlocked?1:0.4, cursor:unlocked?"pointer":"not-allowed" }}
+                    onClick={() => unlocked && setG(p => ({ ...p, currentArea: area.id })) && showNotif(`Area: ${area.name}`, area.color)}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                        <span style={{fontSize:24}}>{area.icon}</span>
+                        <div>
+                          <div style={{ fontSize:15, color:active?"#f5c542":"#c8b8e8" }}>{area.name} {active&&"◀ Active"}</div>
+                          <div style={{ fontSize:11, color:"#6a5a7a" }}>{area.desc}</div>
+                          <div style={{ fontSize:10, color:"#5a4a6a", marginTop:2 }}>
+                            Req: {CULTIVATION_STAGES[area.minStage]?.rank} · Stones/kill: {area.spiritStoneRate}
+                          </div>
+                        </div>
+                      </div>
+                      {!unlocked && <span style={{color:"#4a3a5a",fontSize:11}}>🔒 Locked</span>}
+                      {unlocked && !active && <button className="btn btn-gold" style={{width:"auto",padding:"4px 14px",fontSize:12}} onClick={(e)=>{e.stopPropagation();setG(p=>({...p,currentArea:area.id}));showNotif(`Moved to ${area.name}`,area.color)}}>Enter</button>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══ SCRIPTURES ══ */}
+        {view === "scriptures" && (
+          <div>
+            <div className="notice">Scriptures control how fast you gather Qi and temper your body. Equip one at a time. Learn with Spirit Stones.</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {SCRIPTURES.map(s => {
+                const learned = g.unlockedScriptures.includes(s.id);
+                const equipped = g.equippedScripture === s.id;
+                const canLearn = g.stageId >= s.unlockStage && !learned && g.spiritStones >= s.cost;
+                const unlockable = g.stageId >= s.unlockStage;
+                return (
+                  <div key={s.id} style={{ background:equipped?"#1e183088":"#12101888", border:`1px solid ${equipped?"#8a60b0":learned?"#3a2f55":"#1a1830"}`, borderRadius:5, padding:"12px 14px", opacity:unlockable||learned?1:0.45 }}>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      <span style={{fontSize:22}}>{s.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <span className={`grade-${s.rank}`} style={{fontWeight:600,fontSize:14}}>{s.name}</span>
+                          <span style={{fontSize:10,padding:"1px 6px",background:"#2a1f3a",borderRadius:2,color:RANK_COLORS[s.rank]||"#888"}}>{s.rank}</span>
+                        </div>
+                        <div style={{color:"#6a5a7a",fontSize:12,marginTop:2}}>{s.desc}</div>
+                        <div style={{ display:"flex", gap:12, marginTop:4, fontSize:11 }}>
+                          <span style={{color:"#5cb8ff"}}>⚡ Qi ×{s.qiMult}</span>
+                          <span style={{color:"#e06050"}}>💪 Body ×{s.bodMult}</span>
+                          {!learned && <span style={{color:"#a0809a"}}>Cost: {fmt(s.cost)} Stones · Need: {CULTIVATION_STAGES[s.unlockStage]?.rank}</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:70}}>
+                        {equipped && <span style={{color:"#8a60b0",fontSize:10,fontFamily:"monospace",textAlign:"center"}}>EQUIPPED</span>}
+                        {learned && !equipped && <button className="btn btn-gold" style={{fontSize:11,padding:"4px"}} onClick={() => setG(p=>({...p,equippedScripture:s.id}))}>Equip</button>}
+                        {!learned && unlockable && <button className={`btn${canLearn?" btn-blue":""}`} style={{fontSize:11,padding:"4px"}} onClick={()=>learnScripture(s.id)} disabled={!canLearn}>
+                          {g.spiritStones>=s.cost ? "Learn" : `${fmt(s.cost)} 💎`}
+                        </button>}
+                        {!learned && !unlockable && <span style={{color:"#3a2a4a",fontSize:10,textAlign:"center"}}>🔒</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══ SKILLS ══ */}
+        {view === "skills" && (
+          <div>
+            <div className="notice">Combat techniques. Unlock with Spirit Stones. Equip one active skill for battle.</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {SKILLS.map(sk => {
+                const learned = g.unlockedSkills.includes(sk.id);
+                const equipped = g.equippedSkill === sk.id;
+                const skillCost = sk.unlockStage * 500 + 200;
+                const unlockable = g.stageId >= sk.unlockStage;
+                const canLearn = unlockable && !learned && g.spiritStones >= skillCost;
+                return (
+                  <div key={sk.id} style={{ background:equipped?"#1e183088":"#12101888", border:`1px solid ${equipped?"#5090ff":learned?"#3a2f55":"#1a1830"}`, borderRadius:5, padding:"12px 14px", opacity:unlockable||learned?1:0.45 }}>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      <span style={{fontSize:22}}>{sk.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <span className={`grade-${sk.rank}`} style={{fontWeight:600}}>{sk.name}</span>
+                          <span style={{fontSize:10,padding:"1px 6px",background:"#2a1f3a",borderRadius:2,color:RANK_COLORS[sk.rank]||"#888"}}>{sk.rank} Rank</span>
+                        </div>
+                        <div style={{color:"#6a5a7a",fontSize:12}}>{sk.desc}</div>
+                        <div style={{fontSize:11,marginTop:2,color:"#5a4a6a"}}>
+                          ×{sk.dmgMult} DMG · {sk.qiCost} Qi cost · Req: {CULTIVATION_STAGES[sk.unlockStage]?.rank}
+                          {!learned && ` · Cost: ${fmt(skillCost)} 💎`}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,minWidth:70}}>
+                        {equipped && <span style={{color:"#5090ff",fontSize:10,fontFamily:"monospace",textAlign:"center"}}>EQUIPPED</span>}
+                        {learned && !equipped && <button className="btn btn-blue" style={{fontSize:11,padding:"4px"}} onClick={()=>setG(p=>({...p,equippedSkill:sk.id}))}>Equip</button>}
+                        {!learned && unlockable && <button className={`btn${canLearn?" btn-blue":""}`} style={{fontSize:11,padding:"4px"}} onClick={()=>learnSkill(sk.id)} disabled={!canLearn}>
+                          {g.spiritStones>=skillCost?"Learn":`${fmt(skillCost)} 💎`}
+                        </button>}
+                        {!learned && !unlockable && <span style={{color:"#3a2a4a",fontSize:10,textAlign:"center"}}>🔒</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══ INVENTORY ══ */}
+        {view === "inventory" && (
+          <div>
+            {g.inventory.length === 0 && <div className="notice" style={{textAlign:"center",padding:30,color:"#5a4a6a"}}>Your bag is empty. Explore to find items.</div>}
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {g.inventory.map(item=>(
+                <div key={item.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", background:"#12101888", borderRadius:5, border:"1px solid #2a1f3a" }}>
+                  <span style={{fontSize:22}}>{item.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <span className={`grade-${item.grade}`} style={{fontSize:14}}>{item.name}</span>
+                      <span style={{fontSize:10,color:"#5a4a6a",padding:"1px 5px",background:"#1a1028",borderRadius:2}}>{item.grade}</span>
+                    </div>
+                    <div style={{color:"#6a5a7a",fontSize:12}}>{item.desc}</div>
+                  </div>
+                  <span style={{color:"#f5c542",fontFamily:"monospace",fontSize:13}}>×{item.qty}</span>
+                  <button className="btn btn-green" style={{width:"auto",padding:"5px 12px",fontSize:12}} onClick={()=>useItem(item.id)}>Use</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══ SHOP ══ */}
+        {view === "shop" && (
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div className="notice" style={{margin:0,flex:1}}>Purchase with Spirit Stones 💎 · Earned from battles</div>
+              <div style={{ color:"#a855f7", fontFamily:"monospace", marginLeft:12 }}>💎 {fmt(g.spiritStones)}</div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {ITEMS.map(item=>{
+                const canBuy = g.spiritStones >= item.cost;
+                return (
+                  <div key={item.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", background:"#12101888", borderRadius:5, border:"1px solid #2a1f3a" }}>
+                    <span style={{fontSize:22}}>{item.icon}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <span className={`grade-${item.grade}`}>{item.name}</span>
+                        <span style={{fontSize:10,color:"#5a4a6a",padding:"1px 5px",background:"#1a1028",borderRadius:2}}>{item.grade} Grade</span>
+                      </div>
+                      <div style={{color:"#6a5a7a",fontSize:12}}>{item.desc}</div>
+                    </div>
+                    <span style={{color:"#a855f7",fontFamily:"monospace",fontSize:13,whiteSpace:"nowrap"}}>{fmt(item.cost)} 💎</span>
+                    <button className={`btn${canBuy?" btn-gold":""}`} style={{width:"auto",padding:"5px 12px",fontSize:12}} onClick={()=>buyItem(item)} disabled={!canBuy}>Buy</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══ ACHIEVEMENTS ══ */}
+        {view === "achievements" && (
+          <div>
+            <div className="notice">Achievements from your exploits — as observed by Heaven itself.</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {ACHIEVEMENTS_DATA.map(a=>{
+                const done = g.achievements.includes(a.id);
+                return (
+                  <div key={a.id} style={{ display:"flex", gap:12, alignItems:"center", padding:"10px 14px", background:done?"#1a1830":"#0e0c14", borderRadius:5, border:`1px solid ${done?"#8a5a20":"#1a1830"}`, opacity:done?1:0.5 }}>
+                    <span style={{fontSize:20}}>{a.icon}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{color:done?"#f5c542":"#5a4a6a",fontSize:14}}>{a.title}</div>
+                      <div style={{color:"#5a4a6a",fontSize:11}}>{a.desc}</div>
+                    </div>
+                    {done && <span style={{fontSize:18}}>✅</span>}
+                    {!done && <span style={{color:"#3a2a4a",fontSize:12}}>?</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══ REALM VIEW ══ */}
+        {view === "realm" && (
+          <div>
+            <div className="notice">The full path of cultivation — from Spirit Apprentice to True Immortal.</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+              {CULTIVATION_STAGES.map(s=>{
+                const isCurrent = g.stageId === s.id;
+                const isPast = g.stageId > s.id;
+                return (
+                  <div key={s.id} style={{ display:"flex", gap:10, alignItems:"center", padding:"7px 10px", background:isCurrent?"#1e183088":"transparent", borderRadius:4, border:isCurrent?"1px solid #3a2f55":"1px solid transparent", opacity:isPast||isCurrent?1:0.35 }}>
+                    <div style={{ width:20, height:20, borderRadius:"50%", background:s.color+"22", border:`2px solid ${s.color}`, flexShrink:0, boxShadow:isCurrent?`0 0 6px ${s.color}`:"none" }} />
+                    <div style={{ flex:1 }}>
+                      <span style={{color:s.color,fontSize:13}}>{s.rank}{s.level?" · "+s.level:""}</span>
+                      <span style={{fontSize:10,color:"#4a3a5a",marginLeft:8}}>{s.realm}</span>
+                      {isCurrent&&<span style={{marginLeft:8,color:"#8a60b0",fontSize:10}}>◀ YOU ARE HERE</span>}
+                    </div>
+                    {s.qiReq < Infinity && <span style={{color:"#4a3a5a",fontSize:10,fontFamily:"monospace"}}>{fmt(s.qiReq)} Qi</span>}
+                    {isPast && <span style={{fontSize:14}}>✓</span>}
+                  </div>
+                );
+              })}
+              <div style={{ marginTop:16 }}>
+                <div style={{color:"#5a4a6a",fontSize:11,letterSpacing:2,marginBottom:8,textTransform:"uppercase"}}>Body Cultivation Path</div>
+                {BODY_STAGES.map(b=>{
+                  const isCurrent = g.bodyStageId === b.id;
+                  const isPast = g.bodyStageId > b.id;
+                  return (
+                    <div key={b.id} style={{ display:"flex", gap:10, alignItems:"center", padding:"5px 10px", opacity:isPast||isCurrent?1:0.3 }}>
+                      <div style={{ width:12, height:12, borderRadius:"50%", background:b.color+"44", border:`1px solid ${b.color}`, flexShrink:0 }} />
+                      <span style={{color:b.color,fontSize:12}}>{b.name}</span>
+                      {isCurrent&&<span style={{color:"#c05030",fontSize:10}}>◀ Current</span>}
+                      {b.id>0&&<span style={{marginLeft:"auto",color:"#4a3a5a",fontSize:10}}>+{b.bonus.atk} ATK · +{b.bonus.def} DEF · +{b.bonus.hp} HP</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ BATTLE VIEW ══ */}
+        {view === "battle" && battle && (
+          <div className="card" style={{ border:`1px solid #aa2030`, boxShadow:"0 0 30px #aa203033" }}>
+            <div style={{ textAlign:"center", marginBottom:14 }}>
+              <div style={{ fontSize:11, letterSpacing:3, color:"#aa4050", marginBottom:4 }}>
+                {battle.enemy.elite ? "⚠️ ELITE BATTLE ⚠️" : "⚔️ BATTLE"}
+              </div>
+              <div style={{ fontSize:22, color:"#ff6070" }}>{battle.enemy.name}</div>
+              <div style={{ fontSize:11, color:"#6a5a7a", marginBottom:8 }}>ATK: {fmt(battle.enemy.atk)} · DEF: {fmt(battle.enemy.def)}</div>
+              <div style={{ display:"flex", gap:8, justifyContent:"center", alignItems:"center", marginBottom:4 }}>
+                <span style={{fontSize:11,color:"#8a6060"}}>Enemy HP</span>
+                <div style={{ width:200, height:12, borderRadius:6, background:"#1a0810" }}>
+                  <div style={{ width:(battle.enemy.currentHp/battle.enemy.maxHp*100)+"%", height:"100%", borderRadius:6, background:"linear-gradient(90deg,#aa1020,#ff2040)", transition:"width .3s" }} />
+                </div>
+                <span style={{fontSize:11,color:"#ff4050",fontFamily:"monospace"}}>{fmt(battle.enemy.currentHp)}/{fmt(battle.enemy.maxHp)}</span>
+              </div>
+            </div>
+
+            <div style={{ background:"#0e0a1480", border:"1px solid #1a1828", borderRadius:4, padding:10, marginBottom:12, height:140, overflowY:"auto" }}>
+              {battle.log.map((l,i)=>(
+                <div key={i} style={{ fontSize:12.5, color:i===battle.log.length-1?"#c8b8e8":"#4a3a5a", lineHeight:1.6 }}>{l}</div>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <span style={{fontSize:11,color:"#806060"}}>Your HP</span>
+              <div style={{ flex:1, height:10, borderRadius:5, background:"#1a0810" }}>
+                <div style={{ width:(battle.playerHp/g.maxHp*100)+"%", height:"100%", borderRadius:5, background:"linear-gradient(90deg,#aa1020,#ff2040)", transition:"width .3s" }} />
+              </div>
+              <span style={{fontSize:11,color:"#ff4050",fontFamily:"monospace"}}>{fmt(battle.playerHp)}/{fmt(g.maxHp)}</span>
+            </div>
+
+            {!battle.ended && (
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                <button className="btn" onClick={()=>doBattleAction("attack")}>⚔️ Basic</button>
+                <button className={`btn btn-gold${g.qi < equippedSkillData.qiCost?" btn":""}`} onClick={()=>doBattleAction("skill")} disabled={g.qi<equippedSkillData.qiCost}>
+                  {equippedSkillData.icon} {equippedSkillData.name.split(" ")[0]}
+                </button>
+                <button className="btn btn-red" onClick={()=>doBattleAction("flee")}>💨 Flee</button>
+              </div>
+            )}
+            {battle.ended && <div style={{textAlign:"center",fontSize:16,color:battle.won?"#4de8b0":"#ff4f7b",padding:8}}>{battle.won?"✨ Victory!":"💀 Defeated..."}</div>}
+          </div>
+        )}
+
+        {/* ── FOOTER ── */}
+        <div style={{ textAlign:"center", marginTop:20, paddingBottom:10 }}>
+          <div style={{ fontSize:9, letterSpacing:4, color:"#2a1f3a" }}>SEEK THE DAO · TEMPER THE BODY · REACH THE NINE HEAVENS</div>
+          <div style={{ fontSize:9, color:"#2a1f2a", marginTop:2 }}>Open DevTools → Console → type <span style={{color:"#3a2a4a",fontFamily:"monospace"}}>CHEAT.help()</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
