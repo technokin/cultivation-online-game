@@ -1199,4 +1199,5 @@ export default function CultivationOnline() {
       </div>
     </div>
   );
+
 }
